@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DocumentCapture" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/sdk_primary</item>
+        <item name="colorSecondary">@color/sdk_accent</item>
+        <item name="android:statusBarColor">@color/sdk_background_dark</item>
+        <item name="android:navigationBarColor">@color/sdk_background_dark</item>
+        <item name="android:windowBackground">@color/sdk_background_dark</item>
+    </style>
+
+    <style name="Theme.DocumentCapture.Fullscreen" parent="Theme.DocumentCapture">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sdk_primary">#0D99FF</color>
+    <color name="sdk_accent">#00E676</color>
+    <color name="sdk_warning">#FFAB00</color>
+    <color name="sdk_error">#FF3D00</color>
+    <color name="sdk_background_dark">#121212</color>
+    <color name="sdk_surface_dark">#1E1E1E</color>
+    <color name="sdk_surface_card">#2A2A2A</color>
+    <color name="sdk_text_primary">#FFFFFF</color>
+    <color name="sdk_text_secondary">#B0B0B0</color>
+</resources>
