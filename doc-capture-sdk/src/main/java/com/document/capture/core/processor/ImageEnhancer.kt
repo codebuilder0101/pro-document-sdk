@@ -71,29 +71,26 @@ object ImageEnhancer {
         val pixels = IntArray(w * h)
         src.getPixels(pixels, 0, w, 0, 0, w, h)
 
-        // Compute adaptive threshold using Otsu approximation
+        // Single pass: compute luminance per pixel and accumulate sum for threshold.
+        // This avoids recomputing RGB → lum in a second pass.
+        val luminances = IntArray(pixels.size)
         var sum = 0L
-        for (p in pixels) {
-            val r = (p shr 16) and 0xFF
-            val g = (p shr 8) and 0xFF
-            val b = p and 0xFF
-            sum += (299 * r + 587 * g + 114 * b) / 1000
-        }
-        val avgLum = (sum / pixels.size).toInt()
-        val threshold = (avgLum * 0.88f).toInt().coerceIn(70, 180)
-
         for (i in pixels.indices) {
             val p = pixels[i]
             val r = (p shr 16) and 0xFF
             val g = (p shr 8) and 0xFF
             val b = p and 0xFF
             val lum = (299 * r + 587 * g + 114 * b) / 1000
+            luminances[i] = lum
+            sum += lum
+        }
 
-            pixels[i] = if (lum < threshold) {
-                Color.BLACK
-            } else {
-                Color.WHITE
-            }
+        // Mean-bias adaptive threshold (not Otsu; uses a fixed bias on the mean)
+        val avgLum = (sum / pixels.size).toInt()
+        val threshold = (avgLum * 0.88f).toInt().coerceIn(70, 180)
+
+        for (i in pixels.indices) {
+            pixels[i] = if (luminances[i] < threshold) Color.BLACK else Color.WHITE
         }
 
         output.setPixels(pixels, 0, w, 0, 0, w, h)

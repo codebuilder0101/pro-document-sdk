@@ -33,7 +33,7 @@ class QualityLabActivity : AppCompatActivity() {
 
         binding.btnLabBack.setOnClickListener { finish() }
         binding.btnLabPick.setOnClickListener {
-            pickerLauncher.launch("*/*")
+            pickerLauncher.launch("image/*")
         }
 
         // Initial analysis with reference CNH image

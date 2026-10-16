@@ -51,4 +51,28 @@ class DocumentQuadTest {
         )
         assertFalse(concave.isConvex())
     }
+
+    @Test
+    fun testDegenerateQuadCoincidingPoints() {
+        // Two coinciding points that previously caused IndexOutOfBoundsException
+        val degeneratePoints = listOf(
+            PointF(10f, 10f),
+            PointF(10f, 10f),
+            PointF(100f, 60f),
+            PointF(100f, 10f)
+        )
+        val quad = DocumentQuad.fromUnordered(degeneratePoints)
+        assertTrue("Fallback quad should be valid convex quad", quad.isConvex())
+        assertTrue("Quad width should be > 0", quad.getWidth() > 0)
+        assertTrue("Quad height should be > 0", quad.getHeight() > 0)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun testDegenerateQuadFewerThanFourPoints() {
+        val twoPoints = listOf(
+            PointF(10f, 10f),
+            PointF(50f, 50f)
+        )
+        DocumentQuad.fromUnordered(twoPoints)
+    }
 }

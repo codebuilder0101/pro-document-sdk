@@ -10,7 +10,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.document.capture.core.model.CaptureConfig
 import com.document.capture.core.model.DocumentSide
+import com.document.capture.core.model.DocumentVerificationResult
 import com.document.capture.sample.databinding.ActivityMainBinding
+import com.document.capture.ui.DocumentCaptureCallback
 import com.document.capture.ui.DocumentCaptureSDK
 import com.document.capture.ui.crop.CamScannerCropActivity
 import com.document.capture.ui.theme.DocumentCaptureTheme
@@ -91,7 +93,23 @@ class MainActivity : AppCompatActivity() {
                 DocumentCaptureSDK.Builder(this)
                     .setTheme(selectedTheme)
                     .setConfig(CaptureConfig(requireBackSide = requireBack))
-                    .launch(this)
+                    .launch(this, object : DocumentCaptureCallback {
+                        override fun onCaptureSuccess(result: DocumentVerificationResult) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Capture Success: ${result.documentType} (Quality: ${(result.qualityScore * 100).toInt()}%)",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        override fun onCaptureCancelled() {
+                            Toast.makeText(this@MainActivity, "Capture flow cancelled", Toast.LENGTH_SHORT).show()
+                        }
+
+                        override fun onCaptureError(message: String) {
+                            Toast.makeText(this@MainActivity, "Capture error: $message", Toast.LENGTH_LONG).show()
+                        }
+                    })
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -127,6 +145,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val quad = DocumentCaptureSDK.detectEdges(bitmap)
+        bitmap.recycle() // Recycle decoded bitmap after edge detection
+
         val cropIntent = Intent(this, CamScannerCropActivity::class.java).apply {
             putExtra(CamScannerCropActivity.EXTRA_IMAGE_PATH, cacheFile.absolutePath)
             putExtra(CamScannerCropActivity.EXTRA_QUAD, quad)

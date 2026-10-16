@@ -109,7 +109,7 @@ class MockDocumentEndpointClient : DocumentEndpointService {
             frontRectifiedBitmap = frontBitmap,
             backRectifiedBitmap = backBitmap,
             exportedPdfPath = pdfPath,
-            qualityScore = 0.96f
+            qualityScore = 0.96f // TODO: Populated by real verification endpoint in production
         )
     }
 }

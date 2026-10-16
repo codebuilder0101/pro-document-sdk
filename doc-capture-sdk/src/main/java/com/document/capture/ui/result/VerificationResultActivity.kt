@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import com.document.capture.core.util.getSerializableCompat
 import com.document.capture.databinding.ActivityVerificationResultBinding
 import java.io.File
 
@@ -27,8 +28,7 @@ class VerificationResultActivity : AppCompatActivity() {
         val docType = intent.getStringExtra(EXTRA_DOC_TYPE) ?: "Standard Document"
         val qualityScore = intent.getFloatExtra(EXTRA_QUALITY_SCORE, 0.96f)
 
-        @Suppress("UNCHECKED_CAST")
-        val fields = intent.getSerializableExtra(EXTRA_FIELDS) as? Map<String, String>
+        val fields = intent.getSerializableCompat<HashMap<String, String>>(EXTRA_FIELDS)
 
         // Bind Quality Score
         val qualityPct = (qualityScore * 100f).toInt().coerceIn(1, 100)
@@ -89,7 +89,8 @@ class VerificationResultActivity : AppCompatActivity() {
         val uri: Uri = try {
             FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", file)
         } catch (e: Exception) {
-            Uri.fromFile(file)
+            Toast.makeText(this, "Error preparing PDF for sharing: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            return
         }
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {

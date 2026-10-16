@@ -41,8 +41,13 @@ object PerspectiveCorrectionEngine {
         val matrix = Matrix()
         val success = matrix.setPolyToPoly(srcPoints, 0, dstPoints, 0, 4)
         if (!success) {
-            // Fallback: return sub-bitmap crop if homography calculation fails
-            return Bitmap.createBitmap(sourceBitmap, 0, 0, sourceBitmap.width, sourceBitmap.height)
+            // Fallback: return bounding-box crop of the quad region
+            val pts = quad.corners
+            val minX = pts.minOf { it.x }.toInt().coerceIn(0, sourceBitmap.width - 1)
+            val minY = pts.minOf { it.y }.toInt().coerceIn(0, sourceBitmap.height - 1)
+            val maxX = pts.maxOf { it.x }.toInt().coerceIn(minX + 1, sourceBitmap.width)
+            val maxY = pts.maxOf { it.y }.toInt().coerceIn(minY + 1, sourceBitmap.height)
+            return Bitmap.createBitmap(sourceBitmap, minX, minY, maxX - minX, maxY - minY)
         }
 
         // Draw rectified output

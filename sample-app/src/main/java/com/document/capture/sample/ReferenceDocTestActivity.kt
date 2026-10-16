@@ -99,6 +99,9 @@ class ReferenceDocTestActivity : AppCompatActivity() {
 
             // 2. Enhance with Magic Color
             val enhanced = DocumentCaptureSDK.enhanceDocument(rectified, EnhancementMode.MAGIC_COLOR)
+            if (rectified !== bmp && rectified !== enhanced) {
+                rectified.recycle()
+            }
 
             // 3. Save rectified bitmap to cache
             val frontFile = File(cacheDir, "reference_cnh_rectified_${System.currentTimeMillis()}.jpg")

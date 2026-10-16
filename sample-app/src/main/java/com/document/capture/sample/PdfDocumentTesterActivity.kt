@@ -13,6 +13,7 @@ import com.document.capture.core.model.EnhancementMode
 import com.document.capture.core.network.MockDocumentEndpointClient
 import com.document.capture.core.pdf.PdfDocumentRasterizer
 import com.document.capture.core.pdf.PdfExportEngine
+import com.document.capture.core.util.getParcelableCompat
 import com.document.capture.sample.databinding.ActivityPdfDocumentTesterBinding
 import com.document.capture.ui.DocumentCaptureSDK
 import com.document.capture.ui.result.VerificationResultActivity
@@ -46,7 +47,7 @@ class PdfDocumentTesterActivity : AppCompatActivity() {
         setupListeners()
 
         // Check if an external Uri was passed in the intent
-        val passedUri = intent.data ?: intent.getParcelableExtra(EXTRA_PDF_URI) as? Uri
+        val passedUri = intent.data ?: intent.getParcelableCompat<Uri>(EXTRA_PDF_URI)
         if (passedUri != null) {
             loadPdfFromUri(passedUri)
         } else {
@@ -162,6 +163,9 @@ class PdfDocumentTesterActivity : AppCompatActivity() {
 
             // 2. Enhance with Magic Color
             val enhanced = DocumentCaptureSDK.enhanceDocument(rectified, EnhancementMode.MAGIC_COLOR)
+            if (rectified !== bmp && rectified !== enhanced) {
+                rectified.recycle()
+            }
 
             // 3. Save rectified bitmap
             val frontFile = File(cacheDir, "pdf_page_${currentPageIndex + 1}_rectified_${System.currentTimeMillis()}.jpg")
@@ -199,6 +203,9 @@ class PdfDocumentTesterActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val rectified = DocumentCaptureSDK.rectifyDocument(bmp, quad)
             val enhanced = DocumentCaptureSDK.enhanceDocument(rectified, EnhancementMode.MAGIC_COLOR)
+            if (rectified !== bmp && rectified !== enhanced) {
+                rectified.recycle()
+            }
             val exportedPdf = PdfExportEngine.exportToPdf(
                 this@PdfDocumentTesterActivity,
                 enhanced,
@@ -213,7 +220,8 @@ class PdfDocumentTesterActivity : AppCompatActivity() {
                     exportedPdf
                 )
             } catch (e: Exception) {
-                Uri.fromFile(exportedPdf)
+                Toast.makeText(this@PdfDocumentTesterActivity, "Error sharing PDF: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                return@launch
             }
 
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -223,6 +231,11 @@ class PdfDocumentTesterActivity : AppCompatActivity() {
             }
             startActivity(Intent.createChooser(shareIntent, "Share Rectified PDF Page"))
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        PdfDocumentRasterizer.clearPdfCache(this)
     }
 
     companion object {

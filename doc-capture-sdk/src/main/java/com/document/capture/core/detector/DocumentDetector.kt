@@ -49,6 +49,10 @@ class DocumentDetector {
         val h = bitmap.height
         if (w < 100 || h < 100) return null
 
+        // Extract all pixels once to avoid per-pixel JNI overhead in hot loops
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+
         // Downscale analysis grid for real-time 30+ FPS speed
         val stepX = max(2, w / 100)
         val stepY = max(2, h / 100)
@@ -65,19 +69,19 @@ class DocumentDetector {
         var bottomBound = (h * 0.88f).toInt()
 
         // 1. Scan from left to right along horizontal rows
-        val leftCandidate = scanBoundary(bitmap, minMarginX, w / 3, minMarginY, maxMarginY, stepX, stepY, isHorizontal = true, isForward = true)
+        val leftCandidate = scanBoundary(pixels, w, h, minMarginX, w / 3, minMarginY, maxMarginY, stepX, stepY, isHorizontal = true, isForward = true)
         if (leftCandidate > minMarginX) leftBound = leftCandidate
 
         // 2. Scan from right to left
-        val rightCandidate = scanBoundary(bitmap, maxMarginX, w * 2 / 3, minMarginY, maxMarginY, -stepX, stepY, isHorizontal = true, isForward = false)
+        val rightCandidate = scanBoundary(pixels, w, h, maxMarginX, w * 2 / 3, minMarginY, maxMarginY, -stepX, stepY, isHorizontal = true, isForward = false)
         if (rightCandidate < maxMarginX) rightBound = rightCandidate
 
         // 3. Scan from top to bottom
-        val topCandidate = scanBoundary(bitmap, minMarginY, h / 3, minMarginX, maxMarginX, stepY, stepX, isHorizontal = false, isForward = true)
+        val topCandidate = scanBoundary(pixels, w, h, minMarginY, h / 3, minMarginX, maxMarginX, stepY, stepX, isHorizontal = false, isForward = true)
         if (topCandidate > minMarginY) topBound = topCandidate
 
         // 4. Scan from bottom to top
-        val bottomCandidate = scanBoundary(bitmap, maxMarginY, h * 2 / 3, minMarginX, maxMarginX, -stepY, stepX, isHorizontal = false, isForward = false)
+        val bottomCandidate = scanBoundary(pixels, w, h, maxMarginY, h * 2 / 3, minMarginX, maxMarginX, -stepY, stepX, isHorizontal = false, isForward = false)
         if (bottomCandidate < maxMarginY) bottomBound = bottomCandidate
 
         // Ensure minimum valid size
@@ -95,8 +99,18 @@ class DocumentDetector {
         return if (quad.isConvex()) quad else DocumentQuad.defaultCentered(w.toFloat(), h.toFloat())
     }
 
+    /**
+     * Scans along a primary axis accumulating gradient energy per scan line.
+     *
+     * Uses a bulk [pixels] array pre-extracted via [Bitmap.getPixels] to eliminate
+     * per-pixel JNI overhead. The gradient neighbor is always sampled leftward (horizontal)
+     * or upward (vertical) using abs(scanStep)/2 — fixing the prior bug where backward
+     * scans sampled in the wrong direction.
+     */
     private fun scanBoundary(
-        bitmap: Bitmap,
+        pixels: IntArray,
+        bitmapWidth: Int,
+        bitmapHeight: Int,
         startScan: Int,
         endScan: Int,
         orthoStart: Int,
@@ -109,6 +123,9 @@ class DocumentDetector {
         var strongestEdgeCoord = startScan
         var maxTotalGradient = 0L
 
+        // Always sample leftward/upward regardless of scan direction for consistent gradient
+        val neighborOffset = abs(scanStep) / 2
+
         var current = startScan
         val condition: (Int) -> Boolean = if (isForward) { c -> c <= endScan } else { c -> c >= endScan }
 
@@ -119,12 +136,14 @@ class DocumentDetector {
                 val x = if (isHorizontal) current else ortho
                 val y = if (isHorizontal) ortho else current
 
-                if (x in 2 until bitmap.width - 2 && y in 2 until bitmap.height - 2) {
-                    val pCurrent = getLuminance(bitmap.getPixel(x, y))
+                if (x in 0 until bitmapWidth && y in 0 until bitmapHeight) {
+                    val pCurrent = getLuminance(pixels[y * bitmapWidth + x])
                     val pPrev = if (isHorizontal) {
-                        getLuminance(bitmap.getPixel(x - scanStep / 2, y))
+                        val prevX = (x - neighborOffset).coerceAtLeast(0)
+                        getLuminance(pixels[y * bitmapWidth + prevX])
                     } else {
-                        getLuminance(bitmap.getPixel(x, y - scanStep / 2))
+                        val prevY = (y - neighborOffset).coerceAtLeast(0)
+                        getLuminance(pixels[prevY * bitmapWidth + x])
                     }
                     val diff = abs(pCurrent - pPrev)
                     rowGradientSum += diff
@@ -158,7 +177,7 @@ class DocumentDetector {
         )
     }
 
-    private inline fun getLuminance(pixel: Int): Int {
+    private fun getLuminance(pixel: Int): Int {
         val r = (pixel shr 16) and 0xFF
         val g = (pixel shr 8) and 0xFF
         val b = pixel and 0xFF

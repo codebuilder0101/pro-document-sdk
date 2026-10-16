@@ -10,6 +10,7 @@ import com.document.capture.core.model.DocumentQuad
 import com.document.capture.core.model.DocumentSide
 import com.document.capture.core.model.EnhancementMode
 import com.document.capture.core.model.QualityMetrics
+import com.document.capture.core.model.DocumentVerificationResult
 import com.document.capture.core.pdf.PdfDocumentRasterizer
 import com.document.capture.core.pdf.PdfExportEngine
 import com.document.capture.core.processor.ImageEnhancer
@@ -20,6 +21,20 @@ import com.document.capture.ui.theme.DocumentCaptureTheme
 import java.io.File
 
 /**
+ * Callback interface for receiving document capture and processing results.
+ * Pass to [DocumentCaptureSDK.Builder.launch] to receive the result programmatically
+ * without needing to observe [com.document.capture.ui.result.VerificationResultActivity].
+ */
+interface DocumentCaptureCallback {
+    /** Called when capture and document processing complete successfully. */
+    fun onCaptureSuccess(result: DocumentVerificationResult)
+    /** Called when the user closes the capture flow without completing. */
+    fun onCaptureCancelled()
+    /** Called when an unrecoverable error occurs during processing. */
+    fun onCaptureError(message: String)
+}
+
+/**
  * Public Entry Point for DocumentCaptureSDK.
  * Provides both high-level UI launching flows and low-level headless Computer Vision methods.
  */
@@ -28,7 +43,8 @@ class DocumentCaptureSDK private constructor(
     private val theme: DocumentCaptureTheme
 ) {
 
-    fun launch(activity: Activity) {
+    fun launch(activity: Activity, callback: DocumentCaptureCallback? = null) {
+        if (callback != null) pendingCallback = callback
         DocumentCaptureTheme.current = theme
         val intent = Intent(activity, DocumentCameraActivity::class.java).apply {
             putExtra(DocumentCameraActivity.EXTRA_SIDE, DocumentSide.FRONT)
@@ -54,12 +70,35 @@ class DocumentCaptureSDK private constructor(
             return DocumentCaptureSDK(config, theme)
         }
 
-        fun launch(activity: Activity) {
-            build().launch(activity)
+        fun launch(activity: Activity, callback: DocumentCaptureCallback? = null) {
+            build().launch(activity, callback)
         }
     }
 
     companion object {
+        // --- SDK Callback State ---
+
+        /**
+         * Holds the pending [DocumentCaptureCallback] set by the host app.
+         * Cleared automatically after delivery.
+         */
+        internal var pendingCallback: DocumentCaptureCallback? = null
+
+        internal fun deliverSuccess(result: DocumentVerificationResult) {
+            pendingCallback?.onCaptureSuccess(result)
+            pendingCallback = null
+        }
+
+        internal fun deliverCancelled() {
+            pendingCallback?.onCaptureCancelled()
+            pendingCallback = null
+        }
+
+        internal fun deliverError(message: String) {
+            pendingCallback?.onCaptureError(message)
+            pendingCallback = null
+        }
+
         // --- Headless Computer Vision API ---
 
         /**

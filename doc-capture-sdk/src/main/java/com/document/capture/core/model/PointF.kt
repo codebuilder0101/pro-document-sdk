@@ -1,11 +1,11 @@
 package com.document.capture.core.model
 
-import android.os.Parcelable
 import java.io.Serializable
 import kotlin.math.hypot
 
 /**
  * High-precision 2D floating-point coordinate for document corners and touch handles.
+ * Implements [Serializable] for Intent-based IPC. Consider adding @Parcelize in future for performance.
  */
 data class PointF(
     val x: Float,

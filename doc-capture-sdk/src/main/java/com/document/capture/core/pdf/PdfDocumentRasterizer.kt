@@ -125,7 +125,17 @@ object PdfDocumentRasterizer {
     fun rasterizeUri(context: Context, uri: Uri, pageIndex: Int = 0, renderDpi: Int = 180): Bitmap? {
         val tempFile = copyUriToCache(context, uri) ?: return null
         val bitmap = rasterizePage(tempFile, pageIndex, renderDpi)
-        // Keep tempFile or delete if not needed
+        tempFile.delete() // Clean up single-use temp file after rasterization
         return bitmap
+    }
+
+    /**
+     * Deletes all cached PDF files previously created by [copyUriToCache].
+     * Call periodically (e.g. in onDestroy of a multi-page session) to prevent cache accumulation.
+     */
+    fun clearPdfCache(context: Context) {
+        context.cacheDir.listFiles { file ->
+            file.name.startsWith("imported_doc_") && file.name.endsWith(".pdf")
+        }?.forEach { it.delete() }
     }
 }

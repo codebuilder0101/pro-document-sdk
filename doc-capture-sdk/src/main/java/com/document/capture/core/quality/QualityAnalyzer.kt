@@ -75,11 +75,9 @@ object QualityAnalyzer {
             )
         }
 
-        // Sample bitmap pixels for fast analysis (step down to ~160x120 grid)
-        val sampleStep = max(1, min(width, height) / 120)
-        var totalLuminance = 0L
-        var sampleCount = 0
-        var glarePixelCount = 0
+        // Sample bitmap pixels for fast analysis (~80x80 grid within quad bounds)
+        val fullPixels = IntArray(width * height)
+        bitmap.getPixels(fullPixels, 0, width, 0, 0, width, height)
 
         // Compute bounds for sampling
         val minX = max(0, min(min(quad.topLeft.x, quad.bottomLeft.x), min(quad.topRight.x, quad.bottomRight.x)).toInt())
@@ -90,9 +88,13 @@ object QualityAnalyzer {
         val stepX = max(1, (maxX - minX) / 80)
         val stepY = max(1, (maxY - minY) / 80)
 
+        var totalLuminance = 0L
+        var sampleCount = 0
+        var glarePixelCount = 0
+
         for (y in minY..maxY step stepY) {
             for (x in minX..maxX step stepX) {
-                val pixel = bitmap.getPixel(x, y)
+                val pixel = fullPixels[y * width + x]
                 val r = Color.red(pixel)
                 val g = Color.green(pixel)
                 val b = Color.blue(pixel)
@@ -112,8 +114,8 @@ object QualityAnalyzer {
         val meanLum = if (sampleCount > 0) totalLuminance.toFloat() / sampleCount else 128f
         val glareRatio = if (sampleCount > 0) glarePixelCount.toFloat() / sampleCount else 0f
 
-        // Focus & Blur via Laplacian variance on center quadrant
-        val blurScore = computeLaplacianVariance(bitmap, minX, minY, maxX, maxY)
+        // Focus & Blur via Laplacian variance on center quadrant (uses pre-extracted pixel array)
+        val blurScore = computeLaplacianVariance(fullPixels, width, minX, minY, maxX, maxY)
 
         // Evaluate Status
         val status = when {
@@ -150,9 +152,11 @@ object QualityAnalyzer {
 
     /**
      * Approximates Laplacian variance to measure edge high-frequency energy.
+     * Uses a pre-extracted [pixels] IntArray to avoid JNI overhead per kernel sample.
      */
     private fun computeLaplacianVariance(
-        bitmap: Bitmap,
+        pixels: IntArray,
+        bitmapWidth: Int,
         startX: Int,
         startY: Int,
         endX: Int,
@@ -170,11 +174,11 @@ object QualityAnalyzer {
 
         for (y in (cy1 + step) until cy2 step step) {
             for (x in (cx1 + step) until cx2 step step) {
-                val center = getLuminance(bitmap.getPixel(x, y))
-                val left = getLuminance(bitmap.getPixel(x - step, y))
-                val right = getLuminance(bitmap.getPixel(x + step, y))
-                val top = getLuminance(bitmap.getPixel(x, y - step))
-                val bottom = getLuminance(bitmap.getPixel(x, y + step))
+                val center = getLuminance(pixels[y * bitmapWidth + x])
+                val left   = getLuminance(pixels[y * bitmapWidth + (x - step)])
+                val right  = getLuminance(pixels[y * bitmapWidth + (x + step)])
+                val top    = getLuminance(pixels[(y - step) * bitmapWidth + x])
+                val bottom = getLuminance(pixels[(y + step) * bitmapWidth + x])
 
                 // Discrete Laplacian filter: 4*C - (L+R+T+B)
                 val laplacian = 4 * center - (left + right + top + bottom)
@@ -190,7 +194,7 @@ object QualityAnalyzer {
         return max(0f, variance.toFloat())
     }
 
-    private inline fun getLuminance(pixel: Int): Int {
+    private fun getLuminance(pixel: Int): Int {
         val r = (pixel shr 16) and 0xFF
         val g = (pixel shr 8) and 0xFF
         val b = pixel and 0xFF

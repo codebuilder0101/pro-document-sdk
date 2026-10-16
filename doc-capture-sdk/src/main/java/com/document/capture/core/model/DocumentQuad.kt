@@ -142,6 +142,14 @@ data class DocumentQuad(
 
             // Remaining two points: top-right has min (y - x), bottom-left has max (y - x)
             val remaining = pts.filter { it != tl && it != br }
+
+            // Guard: degenerate input where two or more points coincide
+            if (remaining.size < 2) {
+                val w = (pts.maxOf { it.x } - pts.minOf { it.x }).coerceAtLeast(1f)
+                val h = (pts.maxOf { it.y } - pts.minOf { it.y }).coerceAtLeast(1f)
+                return defaultCentered(w, h)
+            }
+
             val tr = remaining.minByOrNull { it.y - it.x } ?: remaining[0]
             val bl = remaining.maxByOrNull { it.y - it.x } ?: remaining[1]
 

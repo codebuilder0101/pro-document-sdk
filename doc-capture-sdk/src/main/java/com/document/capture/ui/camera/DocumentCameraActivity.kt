@@ -11,6 +11,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -25,7 +26,9 @@ import com.document.capture.core.model.CaptureConfig
 import com.document.capture.core.model.DocumentQuad
 import com.document.capture.core.model.DocumentSide
 import com.document.capture.core.quality.QualityAnalyzer
+import com.document.capture.core.util.getSerializableCompat
 import com.document.capture.databinding.ActivityCameraCaptureBinding
+import com.document.capture.ui.DocumentCaptureSDK
 import com.document.capture.ui.crop.CamScannerCropActivity
 import com.document.capture.ui.theme.DocumentCaptureTheme
 import java.io.ByteArrayOutputStream
@@ -41,6 +44,7 @@ class DocumentCameraActivity : AppCompatActivity() {
 
     private var imageCapture: ImageCapture? = null
     private var autoCaptureController: AutoCaptureController? = null
+    private var camera: Camera? = null  // Fix 1.1: stored to enable torch control
 
     private var currentSide = DocumentSide.FRONT
     private var config = CaptureConfig()
@@ -55,6 +59,7 @@ class DocumentCameraActivity : AppCompatActivity() {
             startCamera()
         } else {
             Toast.makeText(this, "Camera permission is required to capture documents", Toast.LENGTH_LONG).show()
+            DocumentCaptureSDK.deliverError("Camera permission denied")
             finish()
         }
     }
@@ -64,9 +69,9 @@ class DocumentCameraActivity : AppCompatActivity() {
         binding = ActivityCameraCaptureBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        currentSide = (intent.getSerializableExtra(EXTRA_SIDE) as? DocumentSide) ?: DocumentSide.FRONT
-        config = (intent.getSerializableExtra(EXTRA_CONFIG) as? CaptureConfig) ?: CaptureConfig()
-        theme = (intent.getSerializableExtra(EXTRA_THEME) as? DocumentCaptureTheme) ?: DocumentCaptureTheme.current
+        currentSide = intent.getSerializableCompat<DocumentSide>(EXTRA_SIDE) ?: DocumentSide.FRONT
+        config = intent.getSerializableCompat<CaptureConfig>(EXTRA_CONFIG) ?: CaptureConfig()
+        theme = intent.getSerializableCompat<DocumentCaptureTheme>(EXTRA_THEME) ?: DocumentCaptureTheme.current
         frontProcessedPath = intent.getStringExtra(EXTRA_FRONT_PATH)
 
         setupViews()
@@ -85,7 +90,10 @@ class DocumentCameraActivity : AppCompatActivity() {
             theme.titleBack
         }
 
-        binding.btnClose.setOnClickListener { finish() }
+        binding.btnClose.setOnClickListener {
+            DocumentCaptureSDK.deliverCancelled()
+            finish()
+        }
 
         binding.btnShutter.setOnClickListener {
             capturePhoto()
@@ -129,7 +137,7 @@ class DocumentCameraActivity : AppCompatActivity() {
 
             try {
                 cameraProvider.unbindAll()
-                val camera = cameraProvider.bindToLifecycle(
+                camera = cameraProvider.bindToLifecycle(
                     this,
                     cameraSelector,
                     preview,
@@ -143,6 +151,11 @@ class DocumentCameraActivity : AppCompatActivity() {
     }
 
     private fun processImageAnalysis(imageProxy: ImageProxy) {
+        // Guard: executor may be shut down during activity recreation
+        if (analysisExecutor.isShutdown) {
+            imageProxy.close()
+            return
+        }
         val bitmap = imageProxy.toBitmap()
         imageProxy.close()
 
@@ -182,6 +195,7 @@ class DocumentCameraActivity : AppCompatActivity() {
     private fun onPhotoCaptured(bitmap: Bitmap, filePath: String) {
         // Detect initial quad on captured frame
         val quad = detector.detect(bitmap, useSmoothing = false)
+        bitmap.recycle()
 
         val cropIntent = Intent(this, CamScannerCropActivity::class.java).apply {
             putExtra(CamScannerCropActivity.EXTRA_IMAGE_PATH, filePath)
@@ -197,12 +211,14 @@ class DocumentCameraActivity : AppCompatActivity() {
 
     private fun toggleFlash() {
         isTorchOn = !isTorchOn
+        camera?.cameraControl?.enableTorch(isTorchOn)  // Fix 1.1: actually toggle the torch
         binding.btnFlash.alpha = if (isTorchOn) 1.0f else 0.6f
     }
 
     override fun onDestroy() {
         super.onDestroy()
         analysisExecutor.shutdown()
+        camera = null
     }
 
     companion object {

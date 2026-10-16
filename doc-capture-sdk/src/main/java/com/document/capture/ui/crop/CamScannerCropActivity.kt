@@ -15,7 +15,9 @@ import com.document.capture.core.network.MockDocumentEndpointClient
 import com.document.capture.core.pdf.PdfExportEngine
 import com.document.capture.core.processor.ImageEnhancer
 import com.document.capture.core.processor.PerspectiveCorrectionEngine
+import com.document.capture.core.util.getSerializableCompat
 import com.document.capture.databinding.ActivityCamscannerCropBinding
+import com.document.capture.ui.DocumentCaptureSDK
 import com.document.capture.ui.camera.DocumentCameraActivity
 import com.document.capture.ui.result.VerificationResultActivity
 import com.document.capture.ui.theme.DocumentCaptureTheme
@@ -42,14 +44,10 @@ class CamScannerCropActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val imagePath = intent.getStringExtra(EXTRA_IMAGE_PATH)
-        @Suppress("DEPRECATION")
-        currentQuad = intent.getSerializableExtra(EXTRA_QUAD) as? DocumentQuad
-        @Suppress("DEPRECATION")
-        currentSide = (intent.getSerializableExtra(EXTRA_SIDE) as? DocumentSide) ?: DocumentSide.FRONT
-        @Suppress("DEPRECATION")
-        config = (intent.getSerializableExtra(EXTRA_CONFIG) as? CaptureConfig) ?: CaptureConfig()
-        @Suppress("DEPRECATION")
-        theme = (intent.getSerializableExtra(EXTRA_THEME) as? DocumentCaptureTheme) ?: DocumentCaptureTheme.current
+        currentQuad = intent.getSerializableCompat<DocumentQuad>(EXTRA_QUAD)
+        currentSide = intent.getSerializableCompat<DocumentSide>(EXTRA_SIDE) ?: DocumentSide.FRONT
+        config = intent.getSerializableCompat<CaptureConfig>(EXTRA_CONFIG) ?: CaptureConfig()
+        theme = intent.getSerializableCompat<DocumentCaptureTheme>(EXTRA_THEME) ?: DocumentCaptureTheme.current
         frontProcessedPath = intent.getStringExtra(EXTRA_FRONT_PATH)
 
         if (imagePath == null || !File(imagePath).exists()) {
@@ -68,7 +66,10 @@ class CamScannerCropActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        binding.btnCropBack.setOnClickListener { finish() }
+        binding.btnCropBack.setOnClickListener {
+            DocumentCaptureSDK.deliverCancelled()
+            finish()
+        }
 
         binding.btnResetCrop.setOnClickListener {
             binding.cropView.resetToDefault()
@@ -125,6 +126,9 @@ class CamScannerCropActivity : AppCompatActivity() {
 
         // 2. Apply CamScanner enhancement filter
         val enhanced = ImageEnhancer.apply(rectified, selectedMode)
+        if (rectified !== bmp && rectified !== enhanced) {
+            rectified.recycle()
+        }
 
         // Save processed bitmap to cache file
         val processedFile = File(cacheDir, "doc_processed_${currentSide.name}_${System.currentTimeMillis()}.jpg")
@@ -167,6 +171,13 @@ class CamScannerCropActivity : AppCompatActivity() {
                     pdfPath = pdfFile.absolutePath
                 )
 
+                // Deliver result to host app callback if registered
+                DocumentCaptureSDK.deliverSuccess(result)
+
+                if (frontBitmap !== enhanced) {
+                    frontBitmap.recycle()
+                }
+
                 val resultIntent = Intent(this@CamScannerCropActivity, VerificationResultActivity::class.java).apply {
                     putExtra(VerificationResultActivity.EXTRA_FRONT_PATH, frontFile.absolutePath)
                     putExtra(VerificationResultActivity.EXTRA_BACK_PATH, if (currentSide == DocumentSide.BACK) processedFile.absolutePath else null)
@@ -178,6 +189,13 @@ class CamScannerCropActivity : AppCompatActivity() {
                 startActivity(resultIntent)
                 finish()
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isFinishing) {
+            DocumentCaptureSDK.deliverCancelled()
         }
     }
 
