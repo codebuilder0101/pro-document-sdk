@@ -1,37 +1,56 @@
-# 📄 Document Capture SDK & Sample App
+# 📄 Document Capture SDK & Document Testing Demo App
 
-Enterprise-grade, white-label **Document Capture SDK** for high-quality document onboarding and identity verification. It solves issues with poorly cropped, skewed, blurry, or glaring documents with CamScanner-style automated edge detection, interactive manual corner adjustment with a **2.5× Magnifying Loupe**, perspective homography correction, real-time quality verification, and an end-to-end KYC identity pipeline (Document Capture $\rightarrow$ Liveness Selfie $\rightarrow$ 1:1 Biometric Face Match).
+Enterprise-grade, white-label **Document Capture SDK** for high-quality document onboarding and data extraction. It solves issues with poorly cropped, skewed, blurry, or glaring document photos with CamScanner-style automated edge detection, interactive manual corner adjustment with an 8-handle reticle and **2.5× Magnifying Loupe**, perspective homography correction, real-time quality verification, multi-page PDF processing, and integration with document identification and OCR data extraction endpoints.
+
+---
+
+## 🗺️ Product & Identity Verification Roadmap
+
+The complete multi-stage onboarding workflow is designed as follows:
+
+1. **📄 Document Capture SDK (This Repository)**:
+   - Captures high-quality front (and back) document images or imports PDF/image files.
+   - CamScanner-style auto edge detection, 8-handle manual corner adjustment with 2.5× zoom loupe, and perspective unwarping.
+   - Evaluates quality gates (Laplacian focus blur, specular glare hotspots, luminance).
+   - Sends the rectified document to the endpoint, which identifies the document type and extracts structured data fields.
+   - Exports standardized, rectified multi-page PDF files.
+
+2. **👤 Biometric Liveness (Future Roadmap)**:
+   - Validates that the subject is a real, live human being and captures the optimal facial image.
+
+3. **🤝 1:1 Face Match (Future Roadmap)**:
+   - Compares the verified liveness selfie against the photo extracted from the document at the comparison endpoint.
+
+> **Scope Note**: This repository strictly contains the **Document Capture SDK** (`:doc-capture-sdk`) and a dedicated **Document Testing Sample App** (`:sample-app`).
 
 ---
 
 ## 🏗️ Architecture & Modules
-
-The repository is organized into a modular decoupled architecture:
 
 ```
 document/
 ├── doc-capture-sdk/                 # Core Android Library Module (AAR)
 │   ├── src/main/java/com/document/capture/
 │   │   ├── core/
-│   │   │   ├── model/              # DocumentQuad, PointF, QualityMetrics, CaptureConfig
+│   │   │   ├── model/              # DocumentQuad, QualityMetrics, CaptureConfig, DocumentVerificationResult
 │   │   │   ├── detector/           # Real-time DocumentDetector & AutoCaptureController
-│   │   │   ├── quality/            # QualityAnalyzer (Blur, Glare, Lighting, Skew, Coverage)
+│   │   │   ├── quality/            # QualityAnalyzer (Laplacian blur, glare, lighting, skew)
 │   │   │   ├── processor/          # PerspectiveCorrectionEngine & ImageEnhancer
-│   │   │   ├── pdf/                # PdfDocumentRasterizer & PdfExportEngine
-│   │   │   └── network/            # DocumentOcrService, LivenessService, MockEndpointClient
+│   │   │   ├── pdf/                # Multi-page PdfDocumentRasterizer & PdfExportEngine
+│   │   │   └── network/            # DocumentEndpointService & MockDocumentEndpointClient
 │   │   └── ui/
-│   │       ├── camera/             # CameraX viewfinder with real-time HUD & overlay
-│   │       ├── crop/               # CamScannerCropView (8 handles + 2.5× Loupe)
-│   │       ├── liveness/           # LivenessCaptureActivity (biometric face oval)
-│   │       ├── result/             # VerificationResultActivity & PDF sharing
+│   │       ├── camera/             # CameraX viewfinder with real-time HUD, quality alerts & auto-shutter
+│   │       ├── crop/               # CamScannerCropView (8 handles + 2.5× Loupe) & CamScannerCropActivity
+│   │       ├── result/             # VerificationResultActivity (planar doc display, OCR fields, PDF sharing)
 │   │       └── theme/              # DocumentCaptureTheme (White-label styling)
 │   └── src/test/java/              # Unit tests for geometry, ordering & convexity
-└── sample-app/                      # Test Harness Application (APK)
-    ├── src/main/assets/            # Preloaded Brazilian CNH (PDF & High-Res JPGs)
+└── sample-app/                      # Document Testing Harness Application (APK)
+    ├── src/main/assets/            # Preloaded Brazilian CNH (reference_cnh.pdf, sample_cnh_front.jpg, sample_cnh_back.jpg)
     └── src/main/java/com/document/capture/sample/
-        ├── MainActivity.kt         # Dashboard with Live KYC, Reference Doc, and File Import
-        ├── ReferenceDocTestActivity.kt # Interactive test of the Brazilian CNH PDF
-        └── QualityLabActivity.kt   # Live diagnostics for Blur, Glare & Luminance
+        ├── MainActivity.kt         # Document Testing Dashboard
+        ├── ReferenceDocTestActivity.kt # Attached Brazilian CNH PDF/images tester
+        ├── PdfDocumentTesterActivity.kt # Any single/multi-page PDF tester with page navigation
+        └── QualityLabActivity.kt   # Live diagnostics for Blur, Glare, Luminance & Skew
 ```
 
 ---
@@ -48,7 +67,7 @@ dependencies {
 }
 ```
 
-### 2. Launch Full White-Label KYC Workflow
+### 2. Launch White-Label Document Capture
 
 ```kotlin
 import com.document.capture.ui.DocumentCaptureSDK
@@ -59,16 +78,15 @@ import com.document.capture.core.model.CaptureConfig
 val customTheme = DocumentCaptureTheme(
     primaryColor = Color.parseColor("#0D99FF"),
     accentColor = Color.parseColor("#00E676"),
-    brandName = "Acme Trust KYC"
+    brandName = "Acme Trust Doc SDK"
 )
 
-// Launch end-to-end document capture + liveness selfie + face match
+// Launch document capture (single-sided or two-sided front & back)
 DocumentCaptureSDK.Builder(this)
     .setTheme(customTheme)
     .setConfig(
         CaptureConfig(
-            requireBackSide = true,
-            requireLiveness = true,
+            requireBackSide = false, // Set true for IDs / Driver Licenses
             autoCaptureEnabled = true,
             minBlurScore = 95f,
             maxGlareRatio = 0.035f
@@ -106,17 +124,32 @@ if (metrics.isPassing) {
 
 ---
 
-## 🧪 Testing with the Reference Document (Brazilian CNH)
+## 🧪 Document Testing Harness Features
 
-The test harness bundles the attached reference document (`reference_cnh.pdf`, `sample_cnh_front.jpg`, `sample_cnh_back.jpg`):
+The sample app (`:sample-app`) is dedicated exclusively to testing document capture, rectification, PDF handling, and OCR extraction:
 
-1. **Launch the Sample App** on an Android device or emulator.
-2. Select **"Test with Reference CNH Document"**:
-   - **Front License Tab**: Loads Danilo Marques de Oliveira's CNH card. Touch and drag any corner handle to activate the **2.5× Magnifying Loupe** with precision crosshairs (+).
-   - **Full Digital PDF Page Tab**: Renders the complete digital PDF vector page, runs boundary detection, and unwarps the document into a high-res image.
-   - Tap **"Perspective Rectify & Run KYC"**: Rectifies the document, runs simulated OCR data extraction, verifies biometric liveness, performs face matching ($97.8\%$), and provides a one-tap multi-page PDF export.
-3. Open **"Quality Checks Diagnostic Lab"**:
-   - Inspects real-time focus blur variance (Laplacian score), specular glare ratio, and luminance histograms.
+1. **Live Camera Document Capture**:
+   - Choose between **Single-Sided** (e.g. Passport, Page, Invoice) or **Two-Sided** (Front & Back ID).
+   - Real-time quality feedback: blur detection, specular glare warning, and hold-still guidance.
+   - Auto-captures when stable or allows manual capture.
+   - CamScanner 8-handle crop screen with 2.5× Loupe, Magic Color filter, and direct OCR result screen.
+
+2. **Test Reference CNH Document**:
+   - Instant testing with the bundled Brazilian CNH (`sample_cnh_front.jpg`, `sample_cnh_back.jpg`, `reference_cnh.pdf`).
+   - Switch between Front, Back, or PDF vector page.
+   - Drag corner handles to align boundaries with 2.5× precision loupe and test perspective rectification.
+
+3. **Test Any PDF Document (Multi-Page)**:
+   - Open and test any external single-page or multi-page PDF document.
+   - Interactive page-by-page navigation (Previous / Next Page).
+   - Auto-detects document boundaries on each page, allows interactive 8-handle adjustment, perspective unwarping, and standardized PDF re-export.
+
+4. **Test Any Image from Device**:
+   - Pick skewed, poorly cropped, or shadowed document photos from the gallery.
+   - Adjust handles and run rectification and OCR field extraction.
+
+5. **Document Quality Diagnostics Lab**:
+   - Live visual meters for focus blur variance ($V_{Laplacian}$), specular glare hotspot percentage, and mean luminance.
 
 ---
 
@@ -128,8 +161,8 @@ The test harness bundles the attached reference document (`reference_cnh.pdf`, `
 | **Perspective Warp** | `Matrix.setPolyToPoly` homography transform | CoreImage `CIPerspectiveCorrection` | Headless & Native View bridge |
 | **Quality Analysis** | Laplacian variance, specular glare, luminance | vImage / Metal accelerated filters | Async Promise `<QualityMetrics>` |
 | **CamScanner Loupe** | Custom `CamScannerCropView` with 2.5× floating reticle | UIKit custom loupe layer with `CATransform3D` | `<CamScannerCropView />` component |
-| **PDF Processing** | Android `PdfRenderer` & `PdfDocument` | iOS `PDFKit` (`PDFDocument`, `PDFPage`) | Multi-page export bridge |
-| **Biometrics** | Front camera liveness oval + 1:1 face matching | TrueDepth / AVFoundation face tracking | Full KYC orchestration callback |
+| **PDF Processing** | Multi-page `PdfRenderer` & `PdfDocument` | iOS `PDFKit` (`PDFDocument`, `PDFPage`) | Multi-page export bridge |
+| **Document Endpoint**| Identification & OCR field extraction | REST / gRPC client | React Native client service |
 
 ---
 

@@ -18,11 +18,6 @@
             android:exported="false"
             android:theme="@style/Theme.DocumentCapture" />
 
-        <activity
-            android:name=".ui.liveness.LivenessCaptureActivity"
-            android:screenOrientation="portrait"
-            android:exported="false"
-            android:theme="@style/Theme.DocumentCapture.Fullscreen" />
 
         <activity
             android:name=".ui.result.VerificationResultActivity"

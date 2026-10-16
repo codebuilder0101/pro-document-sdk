@@ -23,7 +23,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:text="@string/sdk_result_title"
+                android:text="Document Capture Summary"
                 android:textColor="@color/sdk_text_primary"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -45,81 +45,13 @@
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
-                    android:text="@string/sdk_result_verified"
+                    android:text="DOCUMENT VERIFIED &amp; RECTIFIED"
                     android:textColor="@color/sdk_accent"
                     android:textSize="13sp"
                     android:textStyle="bold" />
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Face Comparison Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/ivDocFace"
-                        android:layout_width="100dp"
-                        android:layout_height="120dp"
-                        android:background="@color/sdk_surface_card"
-                        android:scaleType="centerCrop"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
-                        app:strokeColor="@color/sdk_primary"
-                        app:strokeWidth="2dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="Document Photo"
-                        android:textColor="@color/sdk_text_secondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginHorizontal="12dp"
-                    android:src="@android:drawable/ic_menu_send"
-                    app:tint="@color/sdk_accent" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/ivSelfieFace"
-                        android:layout_width="100dp"
-                        android:layout_height="120dp"
-                        android:background="@color/sdk_surface_card"
-                        android:scaleType="centerCrop"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
-                        app:strokeColor="@color/sdk_accent"
-                        app:strokeWidth="2dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="Liveness Selfie"
-                        android:textColor="@color/sdk_text_secondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Metrics Card -->
+            <!-- Document Rectified Image Preview -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -136,41 +68,64 @@
                     android:padding="16dp">
 
                     <TextView
-                        android:id="@+id/tvFaceMatchScore"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Biometric Face Match: 97.8%"
-                        android:textColor="@color/sdk_accent"
-                        android:textSize="15sp"
+                        android:text="Rectified Planar Document Output"
+                        android:textColor="@color/sdk_text_primary"
+                        android:textSize="14sp"
                         android:textStyle="bold" />
 
-                    <com.google.android.material.progressindicator.LinearProgressIndicator
-                        android:id="@+id/progressFaceMatch"
+                    <ImageView
+                        android:id="@+id/ivDocFront"
                         android:layout_width="match_parent"
-                        android:layout_height="8dp"
-                        android:layout_marginTop="6dp"
-                        android:progress="98"
-                        app:indicatorColor="@color/sdk_accent"
-                        app:trackColor="#33FFFFFF"
-                        app:trackCornerRadius="4dp" />
+                        android:layout_height="200dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@color/sdk_surface_card"
+                        android:scaleType="fitCenter" />
+
+                    <ImageView
+                        android:id="@+id/ivDocBack"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@color/sdk_surface_card"
+                        android:scaleType="fitCenter"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Quality Assessment Score -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/sdk_surface_dark"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#33FFFFFF"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
                     <TextView
-                        android:id="@+id/tvLivenessScore"
+                        android:id="@+id/tvQualityScore"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="Liveness Confidence: 99.2%"
-                        android:textColor="@color/sdk_primary"
-                        android:textSize="15sp"
+                        android:text="Document Capture Quality: 96%"
+                        android:textColor="@color/sdk_accent"
+                        android:textSize="14sp"
                         android:textStyle="bold" />
 
                     <com.google.android.material.progressindicator.LinearProgressIndicator
-                        android:id="@+id/progressLiveness"
+                        android:id="@+id/progressQuality"
                         android:layout_width="match_parent"
                         android:layout_height="8dp"
-                        android:layout_marginTop="6dp"
-                        android:progress="99"
-                        app:indicatorColor="@color/sdk_primary"
+                        android:layout_marginTop="8dp"
+                        android:progress="96"
+                        app:indicatorColor="@color/sdk_accent"
                         app:trackColor="#33FFFFFF"
                         app:trackCornerRadius="4dp" />
                 </LinearLayout>
@@ -180,7 +135,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="16dp"
                 app:cardBackgroundColor="@color/sdk_surface_dark"
                 app:cardCornerRadius="16dp"
                 app:strokeColor="#33FFFFFF"
@@ -193,9 +148,10 @@
                     android:padding="16dp">
 
                     <TextView
+                        android:id="@+id/tvDocumentTypeHeader"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Extracted Document Data (OCR)"
+                        android:text="Extracted Document Data (Endpoint OCR)"
                         android:textColor="@color/sdk_text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -216,7 +172,7 @@
                 android:id="@+id/btnExportPdf"
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 android:backgroundTint="@color/sdk_primary"
                 android:text="@string/sdk_btn_export_pdf"
                 android:textColor="@android:color/white"

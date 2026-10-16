@@ -10,12 +10,13 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Compiles rectified front and back document captures into a multi-page PDF document.
+ * Compiles rectified document captures into a standardized, clean PDF document.
+ * Supports single-page documents, front/back cards, and multi-page documents.
  */
 object PdfExportEngine {
 
     /**
-     * Creates a standardized PDF containing front and back document captures.
+     * Creates a standardized PDF containing front and optional back document captures.
      */
     fun exportToPdf(
         context: Context,
@@ -23,14 +24,25 @@ object PdfExportEngine {
         backBitmap: Bitmap? = null,
         fileName: String = "scanned_document_${System.currentTimeMillis()}.pdf"
     ): File {
+        val pages = mutableListOf(frontBitmap)
+        if (backBitmap != null) {
+            pages.add(backBitmap)
+        }
+        return exportPagesToPdf(context, pages, fileName)
+    }
+
+    /**
+     * Exports a list of document page bitmaps to a multi-page PDF file.
+     */
+    fun exportPagesToPdf(
+        context: Context,
+        pages: List<Bitmap>,
+        fileName: String = "scanned_document_${System.currentTimeMillis()}.pdf"
+    ): File {
         val document = PdfDocument()
 
-        // Page 1: Front Document
-        addPage(document, frontBitmap, 1)
-
-        // Page 2: Back Document (if present)
-        if (backBitmap != null) {
-            addPage(document, backBitmap, 2)
+        for ((index, bitmap) in pages.withIndex()) {
+            addPage(document, bitmap, index + 1)
         }
 
         val exportDir = File(context.filesDir, "exports").apply { mkdirs() }
@@ -53,8 +65,8 @@ object PdfExportEngine {
         val page = document.startPage(pageInfo)
         val canvas: Canvas = page.canvas
 
-        // Compute aspect-fit target rect with margin
-        val margin = 36f
+        // Compute aspect-fit target rect with clean margin
+        val margin = 32f
         val availW = pageWidth - 2 * margin
         val availH = pageHeight - 2 * margin
 

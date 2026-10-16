@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -21,45 +22,52 @@ class VerificationResultActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         pdfFilePath = intent.getStringExtra(EXTRA_PDF_PATH)
-        val livenessScore = intent.getFloatExtra(EXTRA_LIVENESS_SCORE, 0.992f)
-        val matchScore = intent.getFloatExtra(EXTRA_MATCH_SCORE, 0.978f)
         val frontPath = intent.getStringExtra(EXTRA_FRONT_PATH)
-        val selfiePath = intent.getStringExtra(EXTRA_SELFIE_PATH)
+        val backPath = intent.getStringExtra(EXTRA_BACK_PATH)
+        val docType = intent.getStringExtra(EXTRA_DOC_TYPE) ?: "Standard Document"
+        val qualityScore = intent.getFloatExtra(EXTRA_QUALITY_SCORE, 0.96f)
 
-        // Bind Scores
-        binding.tvFaceMatchScore.text = "Biometric Face Match: %.1f%%".format(matchScore * 100f)
-        binding.progressFaceMatch.progress = (matchScore * 100f).toInt()
+        @Suppress("UNCHECKED_CAST")
+        val fields = intent.getSerializableExtra(EXTRA_FIELDS) as? Map<String, String>
 
-        binding.tvLivenessScore.text = "Liveness Confidence: %.1f%%".format(livenessScore * 100f)
-        binding.progressLiveness.progress = (livenessScore * 100f).toInt()
+        // Bind Quality Score
+        val qualityPct = (qualityScore * 100f).toInt().coerceIn(1, 100)
+        binding.tvQualityScore.text = "Document Capture Quality: $qualityPct%"
+        binding.progressQuality.progress = qualityPct
 
-        // Bind Photos
+        // Bind Front Document Image
         frontPath?.let {
             val bmp = BitmapFactory.decodeFile(it)
-            binding.ivDocFace.setImageBitmap(bmp)
+            if (bmp != null) {
+                binding.ivDocFront.setImageBitmap(bmp)
+            }
         }
 
-        selfiePath?.let {
-            val bmp = BitmapFactory.decodeFile(it)
-            binding.ivSelfieFace.setImageBitmap(bmp)
+        // Bind Back Document Image (if present)
+        if (!backPath.isNullOrEmpty() && File(backPath).exists()) {
+            val backBmp = BitmapFactory.decodeFile(backPath)
+            if (backBmp != null) {
+                binding.ivDocBack.setImageBitmap(backBmp)
+                binding.ivDocBack.visibility = View.VISIBLE
+            }
         }
 
-        // Extracted OCR Data (Reference Brazilian CNH)
-        val fieldsText = buildString {
-            append("• Document: Carteira Nacional de Habilitação (CNH)\n")
-            append("• Full Name: DANILO MARQUES DE OLIVEIRA\n")
-            append("• CPF: 018.174.887-83\n")
-            append("• Birth Date: 22/10/1987\n")
-            append("• CNH Number: 03651498611\n")
-            append("• Category: B\n")
-            append("• Valid Until: 05/02/2030\n")
-            append("• Issuing Authority: DETRAN-PR\n")
-            append("• Mother: VERA LUCIA MARQUES DE OLIVEIRA\n")
-            append("• Father: FRANCISCO JOSE DE OLIVEIRA\n")
-            append("• Digital Certification: Assinador Serpro (MP 2200-2/2001)\n")
-            append("• MRZ:\n  I<BRA036514986<110<<<<<<<<<<<\n  6907097M3002050BRA<<<<<<<<<<<6\n  DANILO<<MARQUES<DE<OLIVEIRA<<<")
+        // Bind Extracted Fields
+        val fieldsText = if (!fields.isNullOrEmpty()) {
+            buildString {
+                for ((key, value) in fields) {
+                    append("• $key: $value\n")
+                }
+            }
+        } else {
+            buildString {
+                append("• Document Type: $docType\n")
+                append("• Capture Status: High Quality Rectified Scan\n")
+                append("• Perspective: Straightened & Planar\n")
+                append("• Filter: Magic Color Contrast Enhanced\n")
+            }
         }
-        binding.tvExtractedFields.text = fieldsText
+        binding.tvExtractedFields.text = fieldsText.trimEnd()
 
         binding.btnExportPdf.setOnClickListener {
             sharePdf()
@@ -94,10 +102,10 @@ class VerificationResultActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PDF_PATH = "extra_pdf_path"
-        const val EXTRA_STATUS = "extra_status"
-        const val EXTRA_LIVENESS_SCORE = "extra_liveness_score"
-        const val EXTRA_MATCH_SCORE = "extra_match_score"
         const val EXTRA_FRONT_PATH = "extra_front_path"
-        const val EXTRA_SELFIE_PATH = "extra_selfie_path"
+        const val EXTRA_BACK_PATH = "extra_back_path"
+        const val EXTRA_DOC_TYPE = "extra_doc_type"
+        const val EXTRA_FIELDS = "extra_fields"
+        const val EXTRA_QUALITY_SCORE = "extra_quality_score"
     }
 }

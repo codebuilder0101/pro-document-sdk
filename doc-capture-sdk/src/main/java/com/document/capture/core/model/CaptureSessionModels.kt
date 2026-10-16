@@ -36,11 +36,10 @@ data class QualityMetrics(
 }
 
 /**
- * Capture Session Configuration
+ * Document Capture Session Configuration
  */
 data class CaptureConfig(
-    val requireBackSide: Boolean = true,
-    val requireLiveness: Boolean = true,
+    val requireBackSide: Boolean = false,
     val autoCaptureEnabled: Boolean = true,
     val stabilityThresholdFrames: Int = 12, // ~400ms at 30fps
     val minBlurScore: Float = 95f,
@@ -52,7 +51,7 @@ data class CaptureConfig(
 ) : Serializable
 
 /**
- * Document capture output package
+ * Document capture output package holding captured and rectified images.
  */
 data class DocumentCaptureResult(
     val frontOriginal: Bitmap,
@@ -67,18 +66,16 @@ data class DocumentCaptureResult(
 )
 
 /**
- * Final identity verification outcome from OCR, Liveness, and Face Match
+ * Document Verification & Data Extraction Result returned by the document endpoint.
  */
-data class VerificationResult(
+data class DocumentVerificationResult(
     val status: String,
     val documentType: String,
     val country: String,
     val extractedFields: Map<String, String>,
-    val documentFaceCrop: Bitmap?,
-    val livenessSelfie: Bitmap?,
-    val livenessScore: Float,
-    val livenessPassed: Boolean,
-    val faceMatchScore: Float,
-    val faceMatchPassed: Boolean,
-    val exportedPdfPath: String?
-)
+    val documentPhotoCrop: Bitmap? = null,
+    val frontRectifiedBitmap: Bitmap? = null,
+    val backRectifiedBitmap: Bitmap? = null,
+    val exportedPdfPath: String? = null,
+    val qualityScore: Float = 0.95f
+) : Serializable

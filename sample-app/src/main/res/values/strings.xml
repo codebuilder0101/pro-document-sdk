@@ -2,14 +2,16 @@
 <resources>
     <string name="app_name">Document Capture Demo</string>
     <string name="main_title">Document Capture SDK</string>
-    <string name="main_subtitle">CamScanner-style perspective correction &amp; KYC onboarding</string>
-    <string name="action_live_camera">Live Camera KYC Flow</string>
-    <string name="action_live_camera_desc">Auto edge detection, real-time quality checks, CamScanner manual crop, liveness selfie &amp; face match</string>
-    <string name="action_reference_cnh">Test with Reference CNH Document</string>
-    <string name="action_reference_cnh_desc">Instant interactive test using the attached Brazilian CNH PDF/images, corner adjustment &amp; OCR</string>
-    <string name="action_pick_file">Pick Image / PDF from Device</string>
-    <string name="action_pick_file_desc">Test document rectification on any external photo or PDF document</string>
-    <string name="action_quality_lab">Quality Checks Diagnostic Lab</string>
+    <string name="main_subtitle">CamScanner-style perspective rectification &amp; document OCR</string>
+    <string name="action_live_camera">Live Camera Document Capture</string>
+    <string name="action_live_camera_desc">Auto edge detection, real-time quality checks, 2.5× loupe manual crop, and homography rectification</string>
+    <string name="action_reference_cnh">Test Reference CNH Document</string>
+    <string name="action_reference_cnh_desc">Instant interactive test using the attached Brazilian CNH PDF/images, 8 handles &amp; OCR</string>
+    <string name="action_test_pdf">Test Any PDF Document (Multi-Page)</string>
+    <string name="action_test_pdf_desc">Browse, render and rectify pages from any PDF document with multi-page navigation</string>
+    <string name="action_pick_image">Test Any Image from Device</string>
+    <string name="action_pick_image_desc">Straighten poorly cropped or skewed document photos from your device gallery</string>
+    <string name="action_quality_lab">Document Quality Diagnostics Lab</string>
     <string name="action_quality_lab_desc">Inspect focus blur variance, specular glare, luminance, and perspective metrics</string>
     <string name="theme_selector_title">Brand Theme Preset</string>
 </resources>

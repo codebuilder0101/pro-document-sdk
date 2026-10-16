@@ -28,6 +28,11 @@
             android:label="Reference CNH Test" />
 
         <activity
+            android:name=".PdfDocumentTesterActivity"
+            android:exported="false"
+            android:label="PDF Document Tester" />
+
+        <activity
             android:name=".QualityLabActivity"
             android:exported="false"
             android:label="Quality Lab" />

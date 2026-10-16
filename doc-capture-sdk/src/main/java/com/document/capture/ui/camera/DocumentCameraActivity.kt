@@ -46,6 +46,7 @@ class DocumentCameraActivity : AppCompatActivity() {
     private var config = CaptureConfig()
     private var theme = DocumentCaptureTheme.current
     private var isTorchOn = false
+    private var frontProcessedPath: String? = null
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -66,6 +67,7 @@ class DocumentCameraActivity : AppCompatActivity() {
         currentSide = (intent.getSerializableExtra(EXTRA_SIDE) as? DocumentSide) ?: DocumentSide.FRONT
         config = (intent.getSerializableExtra(EXTRA_CONFIG) as? CaptureConfig) ?: CaptureConfig()
         theme = (intent.getSerializableExtra(EXTRA_THEME) as? DocumentCaptureTheme) ?: DocumentCaptureTheme.current
+        frontProcessedPath = intent.getStringExtra(EXTRA_FRONT_PATH)
 
         setupViews()
 
@@ -187,6 +189,7 @@ class DocumentCameraActivity : AppCompatActivity() {
             putExtra(CamScannerCropActivity.EXTRA_SIDE, currentSide)
             putExtra(CamScannerCropActivity.EXTRA_CONFIG, config)
             putExtra(CamScannerCropActivity.EXTRA_THEME, theme)
+            putExtra(CamScannerCropActivity.EXTRA_FRONT_PATH, frontProcessedPath)
         }
         startActivity(cropIntent)
         finish()
@@ -207,5 +210,6 @@ class DocumentCameraActivity : AppCompatActivity() {
         const val EXTRA_SIDE = "extra_side"
         const val EXTRA_CONFIG = "extra_config"
         const val EXTRA_THEME = "extra_theme"
+        const val EXTRA_FRONT_PATH = "extra_front_path"
     }
 }

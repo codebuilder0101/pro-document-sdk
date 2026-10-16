@@ -21,10 +21,7 @@
     <string name="sdk_filter_bw">B &amp; W</string>
     <string name="sdk_filter_rotate">Rotate</string>
     <string name="sdk_filter_reset">Reset</string>
-    <string name="sdk_liveness_title">Liveness Selfie</string>
-    <string name="sdk_liveness_instruction">Position your face inside the oval and look straight at the camera</string>
-    <string name="sdk_result_title">Verification Summary</string>
-    <string name="sdk_result_verified">VERIFIED IDENTITY</string>
-    <string name="sdk_result_liveness_score">Liveness Confidence: %1$.1f%%</string>
-    <string name="sdk_result_face_match_score">Biometric Face Match: %1$.1f%%</string>
+    <string name="sdk_result_title">Document Summary</string>
+    <string name="sdk_result_verified">DOCUMENT VERIFIED</string>
+    <string name="sdk_result_quality_score">Quality Confidence: %1$.1f%%</string>
 </resources>

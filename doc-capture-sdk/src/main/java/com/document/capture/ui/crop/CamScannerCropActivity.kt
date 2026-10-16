@@ -6,18 +6,23 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.document.capture.core.model.CaptureConfig
 import com.document.capture.core.model.DocumentQuad
 import com.document.capture.core.model.DocumentSide
 import com.document.capture.core.model.EnhancementMode
+import com.document.capture.core.network.MockDocumentEndpointClient
+import com.document.capture.core.pdf.PdfExportEngine
 import com.document.capture.core.processor.ImageEnhancer
 import com.document.capture.core.processor.PerspectiveCorrectionEngine
 import com.document.capture.databinding.ActivityCamscannerCropBinding
 import com.document.capture.ui.camera.DocumentCameraActivity
-import com.document.capture.ui.liveness.LivenessCaptureActivity
+import com.document.capture.ui.result.VerificationResultActivity
 import com.document.capture.ui.theme.DocumentCaptureTheme
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
+import java.io.Serializable
 
 class CamScannerCropActivity : AppCompatActivity() {
 
@@ -37,9 +42,13 @@ class CamScannerCropActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val imagePath = intent.getStringExtra(EXTRA_IMAGE_PATH)
+        @Suppress("DEPRECATION")
         currentQuad = intent.getSerializableExtra(EXTRA_QUAD) as? DocumentQuad
+        @Suppress("DEPRECATION")
         currentSide = (intent.getSerializableExtra(EXTRA_SIDE) as? DocumentSide) ?: DocumentSide.FRONT
+        @Suppress("DEPRECATION")
         config = (intent.getSerializableExtra(EXTRA_CONFIG) as? CaptureConfig) ?: CaptureConfig()
+        @Suppress("DEPRECATION")
         theme = (intent.getSerializableExtra(EXTRA_THEME) as? DocumentCaptureTheme) ?: DocumentCaptureTheme.current
         frontProcessedPath = intent.getStringExtra(EXTRA_FRONT_PATH)
 
@@ -111,13 +120,13 @@ class CamScannerCropActivity : AppCompatActivity() {
         val bmp = sourceBitmap ?: return
         val quad = binding.cropView.getCroppedQuad() ?: return
 
-        // 1. Perspective unwarping (homography transform)
+        // 1. Perspective unwarping (CamScanner homography transform)
         val rectified = PerspectiveCorrectionEngine.rectify(bmp, quad)
 
         // 2. Apply CamScanner enhancement filter
         val enhanced = ImageEnhancer.apply(rectified, selectedMode)
 
-        // Save processed bitmap to file
+        // Save processed bitmap to cache file
         val processedFile = File(cacheDir, "doc_processed_${currentSide.name}_${System.currentTimeMillis()}.jpg")
         FileOutputStream(processedFile).use { out ->
             enhanced.compress(Bitmap.CompressFormat.JPEG, 95, out)
@@ -134,15 +143,41 @@ class CamScannerCropActivity : AppCompatActivity() {
             startActivity(nextIntent)
             finish()
         } else {
-            // Front & Back are complete, proceed to Liveness Selfie or Result
-            val livenessIntent = Intent(this, LivenessCaptureActivity::class.java).apply {
-                putExtra(LivenessCaptureActivity.EXTRA_FRONT_PATH, frontProcessedPath ?: processedFile.absolutePath)
-                putExtra(LivenessCaptureActivity.EXTRA_BACK_PATH, if (currentSide == DocumentSide.BACK) processedFile.absolutePath else null)
-                putExtra(LivenessCaptureActivity.EXTRA_CONFIG, config)
-                putExtra(LivenessCaptureActivity.EXTRA_THEME, theme)
+            // Document capture complete -> Send to Document Endpoint & Export PDF
+            binding.btnConfirmCrop.isEnabled = false
+            binding.btnConfirmCrop.text = "Processing Document..."
+
+            lifecycleScope.launch {
+                val frontFile = frontProcessedPath?.let { File(it) } ?: processedFile
+                val frontBitmap = BitmapFactory.decodeFile(frontFile.absolutePath)
+                val backBitmap = if (currentSide == DocumentSide.BACK) enhanced else null
+
+                // Compile multi-page PDF
+                val pdfFile = PdfExportEngine.exportToPdf(
+                    this@CamScannerCropActivity,
+                    frontBitmap,
+                    backBitmap
+                )
+
+                // Query Document Endpoint (identifies doc type & extracts fields)
+                val endpointClient = MockDocumentEndpointClient()
+                val result = endpointClient.executeExtraction(
+                    frontBitmap = frontBitmap,
+                    backBitmap = backBitmap,
+                    pdfPath = pdfFile.absolutePath
+                )
+
+                val resultIntent = Intent(this@CamScannerCropActivity, VerificationResultActivity::class.java).apply {
+                    putExtra(VerificationResultActivity.EXTRA_FRONT_PATH, frontFile.absolutePath)
+                    putExtra(VerificationResultActivity.EXTRA_BACK_PATH, if (currentSide == DocumentSide.BACK) processedFile.absolutePath else null)
+                    putExtra(VerificationResultActivity.EXTRA_PDF_PATH, pdfFile.absolutePath)
+                    putExtra(VerificationResultActivity.EXTRA_DOC_TYPE, result.documentType)
+                    putExtra(VerificationResultActivity.EXTRA_FIELDS, HashMap(result.extractedFields) as Serializable)
+                    putExtra(VerificationResultActivity.EXTRA_QUALITY_SCORE, result.qualityScore)
+                }
+                startActivity(resultIntent)
+                finish()
             }
-            startActivity(livenessIntent)
-            finish()
         }
     }
 

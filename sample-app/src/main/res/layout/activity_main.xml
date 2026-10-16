@@ -15,7 +15,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="20dp"
-            android:paddingTop="48dp"
+            android:paddingTop="44dp"
             android:paddingBottom="40dp">
 
             <!-- App Title & Header -->
@@ -39,7 +39,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 android:text="@string/theme_selector_title"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
@@ -49,7 +49,7 @@
                 android:id="@+id/chipGroupTheme"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 app:singleSelection="true">
 
                 <com.google.android.material.chip.Chip
@@ -75,49 +75,49 @@
                     android:text="Emerald Health" />
             </com.google.android.material.chip.ChipGroup>
 
-            <!-- Card 1: Live Camera KYC Flow -->
+            <!-- Card 1: Live Camera Document Capture -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardLiveCamera"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="#33FFFFFF"
-                app:strokeWidth="1dp">
+                app:strokeColor="#330D99FF"
+                app:strokeWidth="1.5dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/action_live_camera"
                         android:textColor="@color/primary"
-                        android:textSize="18sp"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="4dp"
                         android:text="@string/action_live_camera_desc"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 2: Test with Reference CNH Document -->
+            <!-- Card 2: Test Reference CNH Document -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardReferenceCnh"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="14dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/surface_card"
@@ -129,69 +129,69 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/action_reference_cnh"
                         android:textColor="@color/accent"
-                        android:textSize="18sp"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="4dp"
                         android:text="@string/action_reference_cnh_desc"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 3: Pick Image / PDF from Device -->
+            <!-- Card 3: Test Any PDF Document -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardPickFile"
+                android:id="@+id/cardTestPdf"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="14dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="#33FFFFFF"
-                app:strokeWidth="1dp">
+                app:strokeColor="#33FFAB00"
+                app:strokeWidth="1.5dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/action_pick_file"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
+                        android:text="@string/action_test_pdf"
+                        android:textColor="#FFAB00"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/action_pick_file_desc"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/action_test_pdf_desc"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 4: Quality Checks Diagnostic Lab -->
+            <!-- Card 4: Test Any Image from Device -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardQualityLab"
+                android:id="@+id/cardPickImage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="14dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/surface_card"
@@ -203,20 +203,57 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/action_pick_image"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/action_pick_image_desc"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Card 5: Document Quality Diagnostics Lab -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardQualityLab"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/surface_card"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#33FFFFFF"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/action_quality_lab"
                         android:textColor="@color/text_primary"
-                        android:textSize="18sp"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="4dp"
                         android:text="@string/action_quality_lab_desc"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
