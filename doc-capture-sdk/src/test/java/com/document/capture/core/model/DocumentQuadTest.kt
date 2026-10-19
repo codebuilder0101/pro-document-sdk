@@ -75,4 +75,44 @@ class DocumentQuadTest {
         )
         DocumentQuad.fromUnordered(twoPoints)
     }
+
+    @Test
+    fun testQuadScaleAndOffset() {
+        val quad = DocumentQuad(
+            topLeft = PointF(10f, 20f),
+            topRight = PointF(100f, 20f),
+            bottomRight = PointF(100f, 80f),
+            bottomLeft = PointF(10f, 80f)
+        )
+
+        val scaled = quad.scale(2f, 3f)
+        assertEquals(PointF(20f, 60f), scaled.topLeft)
+        assertEquals(PointF(200f, 60f), scaled.topRight)
+        assertEquals(PointF(200f, 240f), scaled.bottomRight)
+        assertEquals(PointF(20f, 240f), scaled.bottomLeft)
+
+        val offset = scaled.offset(15f, -10f)
+        assertEquals(PointF(35f, 50f), offset.topLeft)
+        assertEquals(PointF(215f, 50f), offset.topRight)
+        assertEquals(PointF(215f, 230f), offset.bottomRight)
+        assertEquals(PointF(35f, 230f), offset.bottomLeft)
+    }
+
+    @Test
+    fun testDefaultCenteredQuad() {
+        val quad = DocumentQuad.defaultCentered(1000f, 2000f, marginPercent = 0.10f)
+        assertEquals(PointF(100f, 200f), quad.topLeft)
+        assertEquals(PointF(900f, 200f), quad.topRight)
+        assertEquals(PointF(900f, 1800f), quad.bottomRight)
+        assertEquals(PointF(100f, 1800f), quad.bottomLeft)
+        assertTrue(quad.isConvex())
+
+        // Test default 2% margin preserves full card extents
+        val defaultQuad = DocumentQuad.defaultCentered(1000f, 2000f)
+        assertEquals(PointF(20f, 40f), defaultQuad.topLeft)
+        assertEquals(PointF(980f, 40f), defaultQuad.topRight)
+        assertEquals(PointF(980f, 1960f), defaultQuad.bottomRight)
+        assertEquals(PointF(20f, 1960f), defaultQuad.bottomLeft)
+        assertTrue(defaultQuad.isConvex())
+    }
 }

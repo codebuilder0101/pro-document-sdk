@@ -41,7 +41,7 @@ data class QualityMetrics(
 data class CaptureConfig(
     val requireBackSide: Boolean = false,
     val autoCaptureEnabled: Boolean = true,
-    val stabilityThresholdFrames: Int = 12, // ~400ms at 30fps
+    val stabilityThresholdFrames: Int = 24, // ~800ms at 30fps
     val minBlurScore: Float = 95f,
     val maxGlareRatio: Float = 0.035f,
     val minLuminance: Float = 65f,

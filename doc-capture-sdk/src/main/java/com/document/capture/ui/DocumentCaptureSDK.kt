@@ -106,6 +106,7 @@ class DocumentCaptureSDK private constructor(
          */
         fun detectEdges(bitmap: Bitmap): DocumentQuad {
             return DocumentDetector().detect(bitmap, useSmoothing = false)
+                ?: DocumentQuad.defaultCentered(bitmap.width.toFloat(), bitmap.height.toFloat())
         }
 
         /**

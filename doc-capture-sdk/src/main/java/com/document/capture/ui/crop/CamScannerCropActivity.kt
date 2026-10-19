@@ -3,6 +3,8 @@ package com.document.capture.ui.crop
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -37,6 +39,7 @@ class CamScannerCropActivity : AppCompatActivity() {
     private var selectedMode = EnhancementMode.MAGIC_COLOR
     private var rotationDegrees = 0f
     private var frontProcessedPath: String? = null
+    private var isProceeding = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,13 +59,43 @@ class CamScannerCropActivity : AppCompatActivity() {
             return
         }
 
-        sourceBitmap = BitmapFactory.decodeFile(imagePath)
+        sourceBitmap = loadBitmapWithExif(imagePath)
         binding.cropView.setTheme(theme)
         sourceBitmap?.let { bmp ->
             binding.cropView.setImageBitmap(bmp, currentQuad)
         }
 
         setupButtons()
+    }
+
+    private fun loadBitmapWithExif(filePath: String): Bitmap {
+        val rawBitmap = BitmapFactory.decodeFile(filePath)
+            ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        return try {
+            val exif = ExifInterface(filePath)
+            val orientation = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+            val rotation = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+            if (rotation != 0f) {
+                val matrix = Matrix().apply { postRotate(rotation) }
+                val rotated = Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true)
+                if (rotated !== rawBitmap) {
+                    rawBitmap.recycle()
+                }
+                rotated
+            } else {
+                rawBitmap
+            }
+        } catch (e: Exception) {
+            rawBitmap
+        }
     }
 
     private fun setupButtons() {
@@ -121,6 +154,8 @@ class CamScannerCropActivity : AppCompatActivity() {
         val bmp = sourceBitmap ?: return
         val quad = binding.cropView.getCroppedQuad() ?: return
 
+        isProceeding = true
+
         // 1. Perspective unwarping (CamScanner homography transform)
         val rectified = PerspectiveCorrectionEngine.rectify(bmp, quad)
 
@@ -153,7 +188,7 @@ class CamScannerCropActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 val frontFile = frontProcessedPath?.let { File(it) } ?: processedFile
-                val frontBitmap = BitmapFactory.decodeFile(frontFile.absolutePath)
+                val frontBitmap = loadBitmapWithExif(frontFile.absolutePath)
                 val backBitmap = if (currentSide == DocumentSide.BACK) enhanced else null
 
                 // Compile multi-page PDF
@@ -194,7 +229,7 @@ class CamScannerCropActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (isFinishing) {
+        if (isFinishing && !isProceeding) {
             DocumentCaptureSDK.deliverCancelled()
         }
     }

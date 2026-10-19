@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -25,13 +26,14 @@ import com.document.capture.core.detector.DocumentDetector
 import com.document.capture.core.model.CaptureConfig
 import com.document.capture.core.model.DocumentQuad
 import com.document.capture.core.model.DocumentSide
+import com.document.capture.core.model.QualityMetrics
+import com.document.capture.core.model.QualityStatus
 import com.document.capture.core.quality.QualityAnalyzer
 import com.document.capture.core.util.getSerializableCompat
 import com.document.capture.databinding.ActivityCameraCaptureBinding
 import com.document.capture.ui.DocumentCaptureSDK
 import com.document.capture.ui.crop.CamScannerCropActivity
 import com.document.capture.ui.theme.DocumentCaptureTheme
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executors
@@ -44,12 +46,13 @@ class DocumentCameraActivity : AppCompatActivity() {
 
     private var imageCapture: ImageCapture? = null
     private var autoCaptureController: AutoCaptureController? = null
-    private var camera: Camera? = null  // Fix 1.1: stored to enable torch control
+    private var camera: Camera? = null
 
     private var currentSide = DocumentSide.FRONT
     private var config = CaptureConfig()
     private var theme = DocumentCaptureTheme.current
     private var isTorchOn = false
+    private var isProceeding = false
     private var frontProcessedPath: String? = null
 
     private val permissionLauncher = registerForActivityResult(
@@ -84,10 +87,18 @@ class DocumentCameraActivity : AppCompatActivity() {
     }
 
     private fun setupViews() {
+        binding.overlayView.setTheme(theme)
+
         binding.tvStepTitle.text = if (currentSide == DocumentSide.FRONT) {
             theme.titleFront
         } else {
             theme.titleBack
+        }
+
+        binding.tvGuidance.text = if (currentSide == DocumentSide.FRONT) {
+            theme.instructionFront
+        } else {
+            theme.instructionBack
         }
 
         binding.btnClose.setOnClickListener {
@@ -101,6 +112,18 @@ class DocumentCameraActivity : AppCompatActivity() {
 
         binding.btnFlash.setOnClickListener {
             toggleFlash()
+        }
+
+        // Inform overlay view of shutter button geometry once view hierarchy is laid out
+        binding.btnShutter.post {
+            val loc = IntArray(2)
+            binding.btnShutter.getLocationOnScreen(loc)
+            val overlayLoc = IntArray(2)
+            binding.overlayView.getLocationOnScreen(overlayLoc)
+            val cx = (loc[0] - overlayLoc[0]) + binding.btnShutter.width / 2f
+            val cy = (loc[1] - overlayLoc[1]) + binding.btnShutter.height / 2f
+            val radius = (binding.btnShutter.width / 2f) + 12f
+            binding.overlayView.setShutterCenter(cx, cy, radius)
         }
 
         autoCaptureController = AutoCaptureController(config) {
@@ -151,22 +174,55 @@ class DocumentCameraActivity : AppCompatActivity() {
     }
 
     private fun processImageAnalysis(imageProxy: ImageProxy) {
-        // Guard: executor may be shut down during activity recreation
         if (analysisExecutor.isShutdown) {
             imageProxy.close()
             return
         }
-        val bitmap = imageProxy.toBitmap()
+
+        val rotation = imageProxy.imageInfo.rotationDegrees
+        val rawBitmap = imageProxy.toBitmap()
         imageProxy.close()
+
+        // Normalize frame to portrait display orientation
+        val bitmap = if (rotation != 0) {
+            val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+            val rotated = Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true)
+            if (rotated !== rawBitmap) {
+                rawBitmap.recycle()
+            }
+            rotated
+        } else {
+            rawBitmap
+        }
+
+        val frameWidth = bitmap.width
+        val frameHeight = bitmap.height
 
         val detectedQuad = detector.detect(bitmap, useSmoothing = true)
         val metrics = QualityAnalyzer.evaluate(bitmap, detectedQuad, config)
 
         val progress = autoCaptureController?.processFrame(detectedQuad, metrics) ?: 0f
 
+        bitmap.recycle()
+
         runOnUiThread {
-            binding.overlayView.updateFrame(detectedQuad, metrics, progress)
-            binding.tvGuidance.text = metrics.guidanceMessage
+            binding.overlayView.updateFrame(detectedQuad, metrics, progress, frameWidth, frameHeight)
+
+            val displayMessage = if (detectedQuad == null) {
+                if (currentSide == DocumentSide.FRONT) theme.instructionFront else theme.instructionBack
+            } else {
+                metrics.guidanceMessage
+            }
+            binding.tvGuidance.text = displayMessage
+
+            // Dynamic guidance pill border color feedback
+            val strokeColor = when (metrics.status) {
+                QualityStatus.PASS -> theme.quadValidBorderColor
+                QualityStatus.BLUR_DETECTED, QualityStatus.GLARE_DETECTED, QualityStatus.UNSTEADY -> theme.warningColor
+                QualityStatus.TOO_DARK, QualityStatus.TOO_BRIGHT, QualityStatus.TOO_SKEWED -> theme.errorColor
+                QualityStatus.NOT_IN_FRAME -> 0x44FFFFFF.toInt()
+            }
+            binding.cardGuidance.strokeColor = strokeColor
         }
     }
 
@@ -181,7 +237,7 @@ class DocumentCameraActivity : AppCompatActivity() {
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
+                    val bitmap = loadAndNormalizeCapturedBitmap(photoFile.absolutePath)
                     onPhotoCaptured(bitmap, photoFile.absolutePath)
                 }
 
@@ -192,10 +248,45 @@ class DocumentCameraActivity : AppCompatActivity() {
         )
     }
 
+    private fun loadAndNormalizeCapturedBitmap(filePath: String): Bitmap {
+        val rawBitmap = BitmapFactory.decodeFile(filePath)
+            ?: return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        return try {
+            val exif = ExifInterface(filePath)
+            val orientation = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+            val rotationDegrees = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+            if (rotationDegrees != 0f) {
+                val matrix = Matrix().apply { postRotate(rotationDegrees) }
+                val rotated = Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true)
+                if (rotated !== rawBitmap) {
+                    rawBitmap.recycle()
+                }
+                FileOutputStream(filePath).use { out ->
+                    rotated.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                rotated
+            } else {
+                rawBitmap
+            }
+        } catch (e: Exception) {
+            rawBitmap
+        }
+    }
+
     private fun onPhotoCaptured(bitmap: Bitmap, filePath: String) {
-        // Detect initial quad on captured frame
         val quad = detector.detect(bitmap, useSmoothing = false)
+            ?: DocumentQuad.defaultCentered(bitmap.width.toFloat(), bitmap.height.toFloat())
         bitmap.recycle()
+
+        isProceeding = true
 
         val cropIntent = Intent(this, CamScannerCropActivity::class.java).apply {
             putExtra(CamScannerCropActivity.EXTRA_IMAGE_PATH, filePath)
@@ -211,7 +302,7 @@ class DocumentCameraActivity : AppCompatActivity() {
 
     private fun toggleFlash() {
         isTorchOn = !isTorchOn
-        camera?.cameraControl?.enableTorch(isTorchOn)  // Fix 1.1: actually toggle the torch
+        camera?.cameraControl?.enableTorch(isTorchOn)
         binding.btnFlash.alpha = if (isTorchOn) 1.0f else 0.6f
     }
 
@@ -219,6 +310,9 @@ class DocumentCameraActivity : AppCompatActivity() {
         super.onDestroy()
         analysisExecutor.shutdown()
         camera = null
+        if (isFinishing && !isProceeding) {
+            DocumentCaptureSDK.deliverCancelled()
+        }
     }
 
     companion object {

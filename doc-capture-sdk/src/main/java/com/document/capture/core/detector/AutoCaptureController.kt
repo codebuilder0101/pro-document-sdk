@@ -30,9 +30,9 @@ class AutoCaptureController(
         }
 
         if (quad == null || !metrics.isPassing) {
-            consecutivePassingFrames = max(0, consecutivePassingFrames - 2)
-            previousQuad = quad
-            return progress()
+            consecutivePassingFrames = 0
+            previousQuad = null
+            return 0f
         }
 
         val prev = previousQuad

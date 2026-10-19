@@ -158,8 +158,9 @@ data class DocumentQuad(
 
         /**
          * Creates an initial default centered quad for a given frame dimension.
+         * Defaults to a clean 2% touch-friendly boundary inset so headers, serials, and signatures are preserved.
          */
-        fun defaultCentered(width: Float, height: Float, marginPercent: Float = 0.12f): DocumentQuad {
+        fun defaultCentered(width: Float, height: Float, marginPercent: Float = 0.02f): DocumentQuad {
             val mx = width * marginPercent
             val my = height * marginPercent
             return DocumentQuad(

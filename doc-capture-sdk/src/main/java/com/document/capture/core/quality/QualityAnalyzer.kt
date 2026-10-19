@@ -56,6 +56,19 @@ object QualityAnalyzer {
             )
         }
 
+        if (coverage > 0.97f) {
+            return QualityMetrics(
+                blurScore = 0f,
+                glareRatio = 0f,
+                meanLuminance = 128f,
+                skewRatio = 0f,
+                coverageRatio = coverage,
+                isStable = isStable,
+                status = QualityStatus.NOT_IN_FRAME,
+                guidanceMessage = "Move camera back slightly"
+            )
+        }
+
         // Skew check
         val leftLen = quad.topLeft.distanceTo(quad.bottomLeft)
         val rightLen = quad.topRight.distanceTo(quad.bottomRight)
@@ -84,6 +97,37 @@ object QualityAnalyzer {
         val maxX = min(width - 1, max(max(quad.topLeft.x, quad.bottomLeft.x), max(quad.topRight.x, quad.bottomRight.x)).toInt())
         val minY = max(0, min(min(quad.topLeft.y, quad.topRight.y), min(quad.bottomLeft.y, quad.bottomRight.y)).toInt())
         val maxY = min(height - 1, max(max(quad.topLeft.y, quad.topRight.y), max(quad.bottomLeft.y, quad.bottomRight.y)).toInt())
+
+        // Confirm genuine document substrate by testing corner coherence.
+        // 5% inset avoids landing on dark title banners or inner photo areas.
+        val insetX = ((maxX - minX) * 0.05f).toInt().coerceAtLeast(2)
+        val insetY = ((maxY - minY) * 0.05f).toInt().coerceAtLeast(2)
+        val cornerIndices = listOf(
+            (minY + insetY) * width + (minX + insetX),
+            (minY + insetY) * width + (maxX - insetX),
+            (maxY - insetY) * width + (maxX - insetX),
+            (maxY - insetY) * width + (minX + insetX)
+        )
+        val cornerLums = cornerIndices.map { idx -> getLuminance(fullPixels[idx.coerceIn(0, fullPixels.size - 1)]).toFloat() }
+        val cornerMean = cornerLums.average().toFloat()
+        var cornerVar = 0f
+        for (lum in cornerLums) {
+            val d = lum - cornerMean
+            cornerVar += d * d
+        }
+        val cornerStdDev = kotlin.math.sqrt(cornerVar / cornerLums.size)
+        if (cornerStdDev >= 45f) {
+            return QualityMetrics(
+                blurScore = 0f,
+                glareRatio = 0f,
+                meanLuminance = 128f,
+                skewRatio = skewRatio,
+                coverageRatio = coverage,
+                isStable = isStable,
+                status = QualityStatus.NOT_IN_FRAME,
+                guidanceMessage = "Position document inside frame"
+            )
+        }
 
         val stepX = max(1, (maxX - minX) / 80)
         val stepY = max(1, (maxY - minY) / 80)
@@ -166,6 +210,8 @@ object QualityAnalyzer {
         val cx2 = startX + (endX - startX) * 3 / 4
         val cy1 = startY + (endY - startY) / 4
         val cy2 = startY + (endY - startY) * 3 / 4
+
+        if (cx2 - cx1 < 10 || cy2 - cy1 < 10) return 150f
 
         val step = max(2, (cx2 - cx1) / 50)
         var sum = 0.0
